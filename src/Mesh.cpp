@@ -144,13 +144,6 @@ void Mesh::Render(glm::mat4 ViewMatrix, glm::mat4 ProjectionMatrix, glm::vec3 ca
 
     this->renderShaderProgram->Use();
 
-    /*if (GetModelMatrix() != glm::mat4(1))
-        renderShaderProgram->SetUniformMatrix4("Model", GetModelMatrix()); //setting model matrix
-    if (ViewMatrix != glm::mat4(1))
-        renderShaderProgram->SetUniformMatrix4("View", ViewMatrix); //setting model matrix
-    if (ProjectionMatrix != glm::mat4(1))
-        renderShaderProgram->SetUniformMatrix4("Projection", ProjectionMatrix); //setting model matrix*/
-
     renderShaderProgram->SetUniformMatrix4("Model", GetModelMatrix()); //setting model matrix
     renderShaderProgram->SetUniformMatrix4("View", ViewMatrix); //setting model matrix
     renderShaderProgram->SetUniformMatrix4("Projection", ProjectionMatrix); //setting model matrix

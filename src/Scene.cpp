@@ -48,7 +48,7 @@ Scene::Scene(int width, int height) {
 
     displayQuad->renderShaderProgram = std::make_shared<ShaderProgram>(screenRenderShader);
 
-    this->sceneFrameBuffer = std::make_shared<FrameBuffer>(width, height, 3);
+    this->sceneFrameBuffer = std::make_shared<FrameBuffer>(width, height, COLOR_AND_DEPTH_TEXTURE);
 }
 
 //Updates Physics
@@ -87,7 +87,7 @@ void Scene::ClearBuffers() {
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 
     sceneFrameBuffer->Bind();
-    glClearColor(0.5f, 0.0f, 0.25f, 1.0f);
+    glClearColor(0.10f, 0.10f, 0.10f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT| GL_DEPTH_BUFFER_BIT);
 
 }

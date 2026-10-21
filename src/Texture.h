@@ -10,11 +10,12 @@
 class Texture {
 public:
     GLenum attachmentType;
+    GLint internalFormat;
     unsigned int handle;
 
     int width, height;
 
-    Texture(int width, int height, GLenum attachmentType, bool attachToBuffer = false);
+    Texture(int width, int height, GLenum _attachmentType, GLint _internalFormat, bool attachToBuffer = false);
     void ResizeTextureAttachment(int _width, int _height);
     void Bind(GLenum unit);
 

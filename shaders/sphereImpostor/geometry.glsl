@@ -24,7 +24,7 @@ in DATA{
  vec4 graphics;
 }data_in[];
 
-float correction = 1.5f;
+float correction = 1.0f;
 
 void main()
 {

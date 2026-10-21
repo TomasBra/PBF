@@ -56,7 +56,7 @@ private:
     //aditional buffers
     glm::vec3 boundingBoxCenter = glm::vec3(0);
     glm::vec3 boundingBoxSize = glm::vec3(0);
-    float sphereRadius = 0.0725f;
+    float sphereRadius = 0.1f;
     unsigned int ColorsBuffer, PositionsBuffer, NewPositionsBuffer, VelocitiesBuffer, UtilitiesBuffer, GraphicsBuffer = 0;
 
     void InitBoundingBox(glm::vec3 boundingBoxCenter, glm::vec3 boundingBoxSize, std::shared_ptr<ShaderProgram> boundingBoxRenderShader);

@@ -15,89 +15,93 @@ uniform sampler2D particlesDepthTexture;
 
 in vec2 uv;
 
-uniform vec2 texelsize = vec2(1,1);
+uniform vec2 texelsize = vec2(1,0);
 
-const int SAMPLE_COUNT = 30;
+const float near = 0.1f;
+const float far = 100.0f;
 
-const float OFFSETS[30] = float[30](
-        -28.499287551080844,
-        -26.499337550956973,
-        -24.499387548996058,
-        -22.499437544767737,
-        -20.499487537782343,
-        -18.49953752748464,
-        -16.499587513246524,
-        -14.49963749435975,
-        -12.499687470027371,
-        -10.499737439354503,
-        -8.499787401338647,
-        -6.4998373548584,
-        -4.499887298661818,
-        -2.4999372313531225,
-        -0.49998718135373565,
-        1.4999621930526983,
-        3.499912266489702,
-        5.49986232805838,
-        7.499812379231655,
-        9.499762421331635,
-        11.499712455543497,
-        13.499662482927798,
-        15.499612504431878,
-        17.49956252090044,
-        19.49951253308502,
-        21.499462541652775,
-        23.499412547194407,
-        25.499362550231684,
-        27.499312551223795,
-        29
+const int SAMPLE_COUNT = 21;
+
+const float OFFSETS[21] = float[21](
+        -19.451443690876673,
+        -17.4563973459256,
+        -15.461359605469259,
+        -13.466329392628689,
+        -11.47130567957191,
+        -9.476287534090357,
+        -7.481274151572068,
+        -5.486264802951924,
+        -3.491258516565368,
+        -1.4962530470023068,
+        0.4987498861131981,
+        2.493755926496706,
+        4.48876136715687,
+        6.483769021125497,
+        8.478780293057468,
+        10.473795964235448,
+        12.468816784674702,
+        14.463843624018438,
+        16.458877468078487,
+        18.4539193747561,
+        20
 );
 
-const float WEIGHTS[30] = float[30](
-        0.03302145587301725,
-        0.033203556217610085,
-        0.033373309362281625,
-        0.03353051661845077,
-        0.03367499354061956,
-        0.03380657030682477,
-        0.033925092073096436,
-        0.03403041930111521,
-        0.034122428058238376,
-        0.034201010289228936,
-        0.03426607405901285,
-        0.034317543765964784,
-        0.034355360325249315,
-        0.03437948132181533,
-        0.03438987907109618,
-        0.0343863973182838,
-        0.034369134765091784,
-        0.03433816173228983,
-        0.03429351225219843,
-        0.03423523709198431,
-        0.034163403615902505,
-        0.034078095617106466,
-        0.033979413119259644,
-        0.03386747214847555,
-        0.033742404475986074,
-        0.03360435733217827,
-        0.03345349309267747,
-        0.033289988937163506,
-        0.033114036481817946,
-        0.016487201835962927
+const float WEIGHTS[21] = float[21](
+        0.012478241324905347,
+        0.018043032550019177,
+        0.025069773986982367,
+        0.033471596868284194,
+        0.042942589993714204,
+        0.0529403102498448,
+        0.06271499876166393,
+        0.07139083819110861,
+        0.07809055393495573,
+        0.08208052011726609,
+        0.08290289995204973,
+        0.08046061245882896,
+        0.07503863600939073,
+        0.06724674280737294,
+        0.05790860824683086,
+        0.04791831325702582,
+        0.03810189398995028,
+        0.029112382389044004,
+        0.0213744214175789,
+        0.015079810173818195,
+        0.00563322331936511
 );
 
+
+
+
+float LinearizeDepth(float depth){
+   float ndc = depth * 2.0 - 1.0;
+   ndc = (2*depth - gl_DepthRange.near - gl_DepthRange.far)/gl_DepthRange.diff;
+
+   float linearDepth = (2.0 * near * far) / (far + near - ndc * (far - near));
+
+   return linearDepth;
+}
+
+vec3 ViewPos(vec2 uv){
+   float depth = texture(particlesColorTexture, uv).x;
+   vec3 viewVector = (inverse(Projection) * vec4(uv*2.0-1.0, 1, 1)).xyz;
+
+   return normalize(viewVector)*depth;
+}
+
+vec3 WorldPos(vec2 uv){
+   vec3 viewPos = ViewPos(uv);
+
+   return (inverse(View)*vec4(viewPos, 0)).xyz;
+}
 
 void firstPass(){
-   vec4 result = vec4(0.0);
-   vec2 size = textureSize(particlesColorTexture, 0);
-   for (int i = 0; i < SAMPLE_COUNT; ++i)
-   {
-      vec2 offset = blurDirection * OFFSETS[i] / size;
-      float weight = WEIGHTS[i];
-      result += texture(particlesColorTexture, uv + offset) * weight;
+   float depth = texture(particlesColorTexture, uv).x;
+   if(depth == 0){
+      FragColor = vec4(1,0,0,1);
+   }else {
+      FragColor = vec4(depth,0,0,1);
    }
-
-   //FragColor = result;
-   FragColor = texture(particlesColorTexture, uv);
 }
 
 void secondPass(){
@@ -110,37 +114,48 @@ void secondPass(){
       result += texture(particlesColorTexture, uv + offset) * weight;
    }
 
-   //FragColor = result;
-   FragColor = texture(particlesColorTexture, uv);
+   FragColor = result;
+   //FragColor = texture(particlesColorTexture, uv);
+}
+
+void thirdPass(){
+   vec4 result = vec4(0.0);
+   vec2 size = textureSize(particlesColorTexture, 0);
+   for (int i = 0; i < SAMPLE_COUNT; ++i)
+   {
+      vec2 offset = blurDirection * OFFSETS[i] / size;
+      float weight = WEIGHTS[i];
+      result += texture(particlesColorTexture, uv + offset) * weight;
+   }
+
+   FragColor = result;
+   //FragColor = texture(particlesColorTexture, uv);
 }
 
 void combinationPass(){
-   float depth = texture(particlesDepthTexture, uv).x;
-
-
-   if(texture(sceneDepthTexture, uv).x <= texture(particlesDepthTexture, uv).x){
+   if(min(LinearizeDepth(texture(sceneDepthTexture, uv).x)*5/far,1.0f) <= texture(particlesColorTexture, uv).x + 0.000001){
       FragColor = texture(sceneColorTexture, uv);
    }else{
-      vec3 posEye = (inverse(Projection)*vec4(uv, 1, 1) * texture(particlesDepthTexture, uv).x).xyz;
+      vec3 posCentre = WorldPos(uv);
 
-      vec3 ddx = ((inverse(Projection)*vec4(uv+texelsize.x*vec2(1,0), 1, 1)) * texture(particlesDepthTexture, uv + texelsize.x*vec2(1,0)).x).xyz - posEye;
-      vec3 ddx2 = posEye - ((inverse(Projection)*vec4(uv+texelsize.x*vec2(-1,0), 1, 1)) * texture(particlesDepthTexture, uv + texelsize.x*vec2(-1,0)).x).xyz;
 
+      vec3 ddx = WorldPos(uv+vec2(texelsize.x, 0)) - posCentre;
+      vec3 ddx2 = posCentre - WorldPos(uv+vec2(-texelsize.x, 0));
       if(abs(ddx.z) > abs(ddx2.z)){
          ddx = ddx2;
       }
 
-      vec3 ddy = ((inverse(Projection)*vec4(uv+texelsize.y*vec2(0,1), 1, 1)) * texture(particlesDepthTexture, uv + texelsize.y*vec2(0,1)).x).xyz - posEye;
-      vec3 ddy2 = posEye - ((inverse(Projection)*vec4(uv+texelsize.y*vec2(0,-1), 1, 1)) * texture(particlesDepthTexture, uv + texelsize.y*vec2(0,-1)).x).xyz;
-
-      if(abs(ddy.z) < abs(ddy2.z)){
+      vec3 ddy = WorldPos(uv+vec2(0, texelsize.y)) - posCentre;
+      vec3 ddy2 = posCentre - WorldPos(uv+vec2(0, texelsize.y));
+      if(abs(ddy.z) > abs(ddy2.z)){
          ddy = ddy2;
       }
 
-      vec3 n = normalize(cross(ddx, ddy));
-      FragColor = vec4(n, 1.0);
-      //FragColor = texture(particlesColorTexture, uv);
-      //zFragColor = vec4(texture(particlesDepthTexture, uv).x,texture(particlesDepthTexture, uv).x, texture(particlesDepthTexture, uv).x, 1);
+      vec3 worldNormal = normalize(cross(ddx, ddy));
+      FragColor = vec4(worldNormal, 1);
+
+      float color = texture(particlesColorTexture, uv).x;
+      FragColor = vec4(color, color, color, 1);
    }
 }
 
@@ -151,6 +166,8 @@ void main()
    }else if(STAGE_NUMBER == 1){
       secondPass();
    }else if(STAGE_NUMBER == 2){
+      thirdPass();
+   }else if(STAGE_NUMBER == 3){
       combinationPass();
    }
 }

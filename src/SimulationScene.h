@@ -37,6 +37,8 @@ class SimulationScene: public Scene {
         void DisplaySecondPass(int width, int height);
         ///Normal calculations
         void DisplayThirdPass(int width, int height);
+        ///
+        void DisplayFourthPass(int width, int height);
 };
 
 

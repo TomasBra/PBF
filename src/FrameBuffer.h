@@ -11,6 +11,8 @@
 #define COLOR_TEXTURE 1
 #define DEPTH_TEXTURE 2
 #define COLOR_AND_DEPTH_TEXTURE 3
+#define HIGH_COLOR_TEXTURE 4
+#define HIGH_COLOR_AND_DEPTH_TEXTURE 6
 
 class FrameBuffer {
 

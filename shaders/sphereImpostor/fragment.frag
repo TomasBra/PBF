@@ -24,6 +24,7 @@ void Impostor(out vec3 spherePointPosition, out vec3 cameraNormal){
    if (lensqr > sphereRadius * sphereRadius){
       discard;
    }
+
    cameraNormal = normalize(vec3(-mapping.x, mapping.y, sqrt(sphereRadius*sphereRadius - lensqr)));
    spherePointPosition = vec3(View*vec4(center,1)) + cameraNormal*sphereRadius; //view-space
 }
@@ -78,9 +79,10 @@ void main()
    vec4 clipPos = Projection * vec4(cameraPos, 1.0);
    float ndcDepth = clipPos.z / clipPos.w;
    gl_FragDepth = ((gl_DepthRange.diff * ndcDepth) + gl_DepthRange.near + gl_DepthRange.far) / 2.0;
+   //gl_FragDepth = 1;
+   //FragColor = vec4(ndcDepth, ndcDepth,ndcDepth,1);
+   //FragColor = vec4(cameraNormal,1);
 
-   FragColor = vec4(cameraNormal,1);
-
-   float depth = min(LinearizeDepth(gl_FragDepth)/10, 1.0f);
-   FragColor = vec4(vec3(depth), 1.0);
+   float depth = min(LinearizeDepth(gl_FragDepth)*5/far, 1.0f);
+   FragColor = vec4(depth, 0, 0, 1.0);
 }

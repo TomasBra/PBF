@@ -11,8 +11,8 @@
 
 SimulationScene::SimulationScene(int width, int height): Scene(width, height){
 
-    this->particlesFrameBuffer0 = std::make_shared<FrameBuffer>(width, height, 3);
-    this->particlesFrameBuffer1 = std::make_shared<FrameBuffer>(width, height, 3);
+    this->particlesFrameBuffer0 = std::make_shared<FrameBuffer>(width, height, HIGH_COLOR_AND_DEPTH_TEXTURE);
+    this->particlesFrameBuffer1 = std::make_shared<FrameBuffer>(width, height, HIGH_COLOR_AND_DEPTH_TEXTURE);
     /*particles = std::make_shared<Particles>(Particles(std::make_shared<std::vector<glm::vec4>>(std::vector<glm::vec4>({glm::vec4(-1,0,0,0), glm::vec4(1,0,0,0)})),
         std::make_shared<std::vector<glm::vec4>>(std::vector<glm::vec4>({glm::vec4(0.5,0,0,0), glm::vec4(-0.5,0,0,0)})),
         glm::vec3(0), glm::vec3(2,1,1),
@@ -142,12 +142,16 @@ void SimulationScene::ClearBuffers() {
 
 
 void SimulationScene::Display(int width, int height) {
+    //zero pass
+
     //first pass
     DisplayFirstPass(width, height);
     //second pass
     DisplaySecondPass(width, height);
     //
     DisplayThirdPass(width, height);
+    //
+    DisplayFourthPass(width, height);
 }
 
 
@@ -200,7 +204,6 @@ void SimulationScene::pause() {
 }
 
 
-
 //the partilces are rendered in particlesFrameBuffer0 => Apply postprocessing and draw to particlesFrameBuffer1
 void SimulationScene::DisplayFirstPass(int width, int height) {
     if (this->particlesFrameBuffer0 == nullptr or this->particlesFrameBuffer1 == nullptr or
@@ -229,22 +232,22 @@ void SimulationScene::DisplayFirstPass(int width, int height) {
     this->displayQuad->renderShaderProgram->SetUniformInt("STAGE_NUMBER", 0);
     this->displayQuad->renderShaderProgram->SetUniformVector2("blurDirection", glm::vec2(1,0));//horizontal blur
     this->displayQuad->renderShaderProgram->SetUniformVector2("texelsize", glm::vec2(1.0/width,1.0/height));
-    this->displayQuad->Render(glm::mat4(1.0), glm::mat4(1.0), glm::vec3(1.0));
+    this->displayQuad->Render(camera.GetViewMatrix(), camera.GetProjectionMatrix(width, height), camera.position);
 }
 
 
 //particles are postprocessed in framebuffer1 => Apply postprocessing and draw to DISPLAYBUFFER
 void SimulationScene::DisplaySecondPass(int width, int height) {
-    if (this->particlesFrameBuffer0 == nullptr or this->particlesFrameBuffer1 == nullptr or this->sceneFrameBuffer == nullptr or
-        this->particlesFrameBuffer1->colorTexture == nullptr or this->sceneFrameBuffer->colorTexture == nullptr or
-        this->particlesFrameBuffer0->depthTexture == nullptr or this->displayQuad == nullptr or
-        this->displayQuad->renderShaderProgram == nullptr) {
-
-        throw std::runtime_error("Function SimulationScene::DisplaySecondPass tries to access nullptr");
+    if (this->particlesFrameBuffer0 == nullptr or this->particlesFrameBuffer1 == nullptr or
+        this->particlesFrameBuffer0 == nullptr or this->displayQuad == nullptr or
+        this->displayQuad->renderShaderProgram == nullptr or this->particlesFrameBuffer0->colorTexture == nullptr or
+        this->particlesFrameBuffer0->depthTexture == nullptr) {
+        throw std::runtime_error("Function SimulationScene::DisplayFirstPass tries to access nullptr");
         }
 
     this->particlesFrameBuffer1->Bind();
     glDisable(GL_DEPTH_TEST); //required to not overwrite depth values from first
+
 
     this->particlesFrameBuffer0->Bind();
     glDisable(GL_DEPTH_TEST); //required to not overwrite depth values from first
@@ -253,19 +256,48 @@ void SimulationScene::DisplaySecondPass(int width, int height) {
     this->particlesFrameBuffer1->colorTexture->Bind(GL_TEXTURE2);
     this->displayQuad->renderShaderProgram->SetUniformInt("particlesColorTexture", 2);
 
+    this->particlesFrameBuffer0->depthTexture->Bind(GL_TEXTURE3);
+    this->displayQuad->renderShaderProgram->SetUniformInt("particlesDepthTexture", 3);
+
+    this->displayQuad->renderShaderProgram->SetUniformInt("STAGE_NUMBER", 1);
+    this->displayQuad->renderShaderProgram->SetUniformVector2("blurDirection", glm::vec2(1,0));//horizontal blur
+    this->displayQuad->renderShaderProgram->SetUniformVector2("texelsize", glm::vec2(1.0/width,1.0/height));
+    this->displayQuad->Render(camera.GetViewMatrix(), camera.GetProjectionMatrix(width, height), camera.position);
+}
+
+void SimulationScene::DisplayThirdPass(int width, int height) {
+    if (this->particlesFrameBuffer0 == nullptr or this->particlesFrameBuffer1 == nullptr or this->sceneFrameBuffer == nullptr or
+        this->particlesFrameBuffer1->colorTexture == nullptr or this->sceneFrameBuffer->colorTexture == nullptr or
+        this->particlesFrameBuffer0->depthTexture == nullptr or this->displayQuad == nullptr or
+        this->displayQuad->renderShaderProgram == nullptr) {
+
+        throw std::runtime_error("Function SimulationScene::DisplaySecondPass tries to access nullptr");
+        }
+
+    this->particlesFrameBuffer0->Bind();
+    glDisable(GL_DEPTH_TEST); //required to not overwrite depth values from first
+
+
+    this->particlesFrameBuffer1->Bind();
+    glDisable(GL_DEPTH_TEST); //required to not overwrite depth values from first
+
+
+    this->particlesFrameBuffer0->colorTexture->Bind(GL_TEXTURE2);
+    this->displayQuad->renderShaderProgram->SetUniformInt("particlesColorTexture", 2);
+
 
     //partcilesFrameBuffer0 - depthTexture BEWARE!!! DEPTH TEXTURE STAYS ALWAYS IN FIRST FRAMEBUFFER
     this->particlesFrameBuffer0->depthTexture->Bind(GL_TEXTURE3);
     this->displayQuad->renderShaderProgram->SetUniformInt("particlesDepthTexture", 3);
 
 
-    this->displayQuad->renderShaderProgram->SetUniformInt("STAGE_NUMBER", 1);
+    this->displayQuad->renderShaderProgram->SetUniformInt("STAGE_NUMBER", 2);
     this->displayQuad->renderShaderProgram->SetUniformVector2("blurDirection", glm::vec2(0,1)); //vertical blur
     this->displayQuad->renderShaderProgram->SetUniformVector2("texelsize", glm::vec2(1.0/width,1.0/height));
-    this->displayQuad->Render(glm::mat4(1.0), glm::mat4(1.0), glm::vec3(1.0));
+    this->displayQuad->Render(camera.GetViewMatrix(), camera.GetProjectionMatrix(width, height), camera.position);
 }
 
-void SimulationScene::DisplayThirdPass(int width, int height) {
+void SimulationScene::DisplayFourthPass(int width, int height) {
     if (this->particlesFrameBuffer0 == nullptr or this->particlesFrameBuffer1 == nullptr or this->sceneFrameBuffer == nullptr or
         this->particlesFrameBuffer1->colorTexture == nullptr or this->sceneFrameBuffer->colorTexture == nullptr or
         this->particlesFrameBuffer0->depthTexture == nullptr or this->displayQuad == nullptr or
@@ -292,7 +324,7 @@ void SimulationScene::DisplayThirdPass(int width, int height) {
     this->displayQuad->renderShaderProgram->SetUniformInt("sceneDepthTexture", 1);
 
 
-    this->particlesFrameBuffer0->colorTexture->Bind(GL_TEXTURE2);
+    this->particlesFrameBuffer1->colorTexture->Bind(GL_TEXTURE2);
     this->displayQuad->renderShaderProgram->SetUniformInt("particlesColorTexture", 2);
 
 
@@ -301,9 +333,9 @@ void SimulationScene::DisplayThirdPass(int width, int height) {
     this->displayQuad->renderShaderProgram->SetUniformInt("particlesDepthTexture", 3);
 
 
-    this->displayQuad->renderShaderProgram->SetUniformInt("STAGE_NUMBER", 2);
-    this->displayQuad->renderShaderProgram->SetUniformVector2("texelsize", glm::vec2(1.0/width,1.0/height));
-    this->displayQuad->Render(glm::mat4(1.0), glm::mat4(1.0), glm::vec3(1.0));
+    this->displayQuad->renderShaderProgram->SetUniformInt("STAGE_NUMBER", 3);
+    this->displayQuad->renderShaderProgram->SetUniformVector2("texelsize", glm::vec2(1.0f/width, 1.0f/height));
+    this->displayQuad->Render(camera.GetViewMatrix(), camera.GetProjectionMatrix(width, height), camera.position);
 }
 
 

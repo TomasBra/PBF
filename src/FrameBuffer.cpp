@@ -13,11 +13,15 @@ FrameBuffer::FrameBuffer(int width, int height, int _textureAttachments): textur
     defaultSettings();
 
     if (_textureAttachments == COLOR_TEXTURE or _textureAttachments == COLOR_AND_DEPTH_TEXTURE) {
-        this->colorTexture = std::make_unique<Texture>(width, height, GL_COLOR_ATTACHMENT0, true);
+        this->colorTexture = std::make_unique<Texture>(width, height, GL_COLOR_ATTACHMENT0, GL_RGB, true);
     }
 
-    if (_textureAttachments == DEPTH_TEXTURE or _textureAttachments == COLOR_AND_DEPTH_TEXTURE) {
-        this->depthTexture = std::make_unique<Texture>(width, height, GL_DEPTH_ATTACHMENT, true);
+    if (_textureAttachments == HIGH_COLOR_TEXTURE or _textureAttachments == HIGH_COLOR_AND_DEPTH_TEXTURE) {
+        this->colorTexture = std::make_unique<Texture>(width, height, GL_COLOR_ATTACHMENT0,GL_R32F, true);
+    }
+
+    if (_textureAttachments == DEPTH_TEXTURE or _textureAttachments == COLOR_AND_DEPTH_TEXTURE or _textureAttachments == HIGH_COLOR_AND_DEPTH_TEXTURE) {
+        this->depthTexture = std::make_unique<Texture>(width, height, GL_DEPTH_ATTACHMENT, GL_DEPTH_COMPONENT, true);
     }
 
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {

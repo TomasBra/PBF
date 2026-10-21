@@ -150,7 +150,7 @@ int ShaderProgram::SetUniformDouble(std::string uniformName, double value) {
 int ShaderProgram::SetUniformVector2(std::string uniformName, glm::vec2 value) {
     int uniformLocation = glGetUniformLocation(this->shaderProgramHandle, uniformName.c_str());
     if (uniformLocation == -1) {
-        //throw std::runtime_error("Uniform " + uniformName + " was not found");
+        throw std::runtime_error("Uniform " + uniformName + " was not found");
     }
 
     this->Use();
