@@ -1,12 +1,21 @@
 #version 430 core
 out vec4 FragColor;
 
+uniform sampler2D colorTexture;
 uniform vec3 color;
 
+uniform bool usesColorTexture = false;
+
+const vec4 defaultColor = vec4(1,0,0,1);
+
 in vec3 pos;
+in vec2 uv;
 
 void main()
 {
-   FragColor = vec4(pos.xyz, 1.0f);
-   FragColor = vec4(0.2f, 0.5f, 0.2, 1.0f);
+   if(usesColorTexture){
+      FragColor = texture(colorTexture, uv);
+   }else{
+      FragColor = defaultColor;
+   }
 }

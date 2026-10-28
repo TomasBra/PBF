@@ -15,8 +15,8 @@ std::shared_ptr<std::vector<float>> Utils::combine(std::shared_ptr<std::vector<g
 
     result.reserve(vercities->size()*4+uvs->size()*2);
     for (size_t i = 0; i < vercities->size(); i++) {
-        result.insert(result.end(),(float*)vercities->data()+i, (float*)vercities->data()+i+4);
-        result.insert(result.end(),(float*)uvs->data()+i, (float*)uvs->data()+i+2);
+        result.insert(result.end(),(float*)(vercities->data())+i*4, (float*)(vercities->data())+i*4+4);
+        result.insert(result.end(),(float*)(uvs->data())+i*2, (float*)(uvs->data())+i*2+2);
     }
 
     return std::make_shared<std::vector<float>>(result);

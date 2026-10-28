@@ -7,6 +7,7 @@
 #include <iostream>
 #include <random>
 
+
 Particles::Particles(std::shared_ptr<std::vector<glm::vec4>> vertices, std::shared_ptr<ShaderProgram> computeShader, std::shared_ptr<ShaderProgram> renderShader) {
     renderBoundingBox=false;
     //particles are always rendered as points
@@ -15,7 +16,7 @@ Particles::Particles(std::shared_ptr<std::vector<glm::vec4>> vertices, std::shar
     this->newPositions = std::make_shared<std::vector<glm::vec4>>(vertices->size(), glm::vec4(0.0));
     this->velocities = std::make_shared<std::vector<glm::vec4>>(vertices->size(), glm::vec4(0.0)); //default velocity for each particle
     this->utilities = std::make_shared<std::vector<glm::vec4>>(vercities->size(), glm::vec4(0)); //default lambda for each particle
-    this->graphics = std::make_shared<std::vector<glm::vec4>>(vertices->size(), glm::vec4(0));
+    this->temps = std::make_shared<std::vector<unsigned int>>(vertices->size(), 0);
 
     this -> computeShaderProgram = computeShader;
     this->renderShaderProgram = renderShader;
@@ -34,7 +35,10 @@ Particles::Particles(std::shared_ptr<std::vector<glm::vec4>> vertices, std::shar
     glGenBuffers(1, &NewPositionsBuffer);
     glGenBuffers(1, &VelocitiesBuffer);
     glGenBuffers(1, &UtilitiesBuffer);
-    glGenBuffers(1, &GraphicsBuffer);
+    glGenBuffers(1, &TempsBuffer);
+    glGenBuffers(1, &GridTableBuffer);
+    glGenBuffers(1, &GridIndicesBuffer);
+
 
     this->BufferData();
 }
@@ -47,7 +51,7 @@ Particles::Particles(std::shared_ptr<std::vector<glm::vec4>> vertices, glm::vec3
     this->newPositions = std::make_shared<std::vector<glm::vec4>>(vertices->size(), glm::vec4(0.0));
     this->velocities = std::make_shared<std::vector<glm::vec4>>(vertices->size(), glm::vec4(0.0)); //default velocity for each particle
     this->utilities = std::make_shared<std::vector<glm::vec4>>(vertices->size(), glm::vec4(0)); //default lambda for each particle
-    this->graphics = std::make_shared<std::vector<glm::vec4>>(vertices->size(), glm::vec4(0));
+    this->temps = std::make_shared<std::vector<unsigned int>>(vertices->size(), 0);
 
     this->usingEBO = false;
 
@@ -67,7 +71,9 @@ Particles::Particles(std::shared_ptr<std::vector<glm::vec4>> vertices, glm::vec3
     glGenBuffers(1, &NewPositionsBuffer);
     glGenBuffers(1, &UtilitiesBuffer);
     glGenBuffers(1, &VelocitiesBuffer);
-    glGenBuffers(1, &GraphicsBuffer);
+    glGenBuffers(1, &TempsBuffer);
+    glGenBuffers(1, &GridTableBuffer);
+    glGenBuffers(1, &GridIndicesBuffer);
 
     this->BufferData();
     this->InitBoundingBox(boundingBoxCenter, boundingBoxSize, boundingBoxRenderShader);
@@ -84,7 +90,7 @@ Particles::Particles(std::shared_ptr<std::vector<glm::vec4>> vertices,
     this->newPositions = std::make_shared<std::vector<glm::vec4>>(vertices->size(), glm::vec4(0.0));
     this->velocities = velocities;
     this->utilities = std::make_shared<std::vector<glm::vec4>>(vertices->size(), glm::vec4(0)); //default lambda for each particle
-    this->graphics = std::make_shared<std::vector<glm::vec4>>(vertices->size(), glm::vec4(0));
+    this->temps = std::make_shared<std::vector<unsigned int>>(vertices->size(),0);
 
     this->usingEBO = false;
 
@@ -104,7 +110,9 @@ Particles::Particles(std::shared_ptr<std::vector<glm::vec4>> vertices,
     glGenBuffers(1, &NewPositionsBuffer);
     glGenBuffers(1, &VelocitiesBuffer);
     glGenBuffers(1, &UtilitiesBuffer);
-    glGenBuffers(1, &GraphicsBuffer);
+    glGenBuffers(1, &TempsBuffer);
+    glGenBuffers(1, &GridTableBuffer);
+    glGenBuffers(1, &GridIndicesBuffer);
 
     this->BufferData();
     this->InitBoundingBox(boundingBoxCenter, boundingBoxSize, boundingBoxRenderShader);
@@ -121,7 +129,7 @@ Particles::Particles(uint particlesAmount, glm::vec3 boundingBoxCenter, glm::vec
     this->newPositions = std::make_shared<std::vector<glm::vec4>>(particlesAmount, glm::vec4(0.0));
     this->velocities = std::make_shared<std::vector<glm::vec4>>(); //default velocity for each particle
     this->utilities = std::make_shared<std::vector<glm::vec4>>(particlesAmount, glm::vec4(0)); //default lambda for each particle
-    this->graphics = std::make_shared<std::vector<glm::vec4>>(particlesAmount, glm::vec4(0));
+    this->temps = std::make_shared<std::vector<unsigned int>>(particlesAmount, 0);
 
     this->vercities->reserve(particlesAmount);
     this->velocities->reserve(particlesAmount);
@@ -144,7 +152,9 @@ Particles::Particles(uint particlesAmount, glm::vec3 boundingBoxCenter, glm::vec
     glGenBuffers(1, &NewPositionsBuffer);
     glGenBuffers(1, &VelocitiesBuffer);
     glGenBuffers(1, &UtilitiesBuffer);
-    glGenBuffers(1, &GraphicsBuffer);
+    glGenBuffers(1, &TempsBuffer);
+    glGenBuffers(1, &GridTableBuffer);
+    glGenBuffers(1, &GridIndicesBuffer);
 
     this->InitBoundingBox(boundingBoxCenter, boundingBoxSize, boundingBoxRenderShader);
     this->InitParticles(particlesAmount, boundingBoxCenter, boundingBoxSize);
@@ -164,7 +174,7 @@ Particles::Particles(uint particlesAmountx, uint particlesAmounty, uint particle
     this->newPositions = std::make_shared<std::vector<glm::vec4>>(particlesAmount, glm::vec4(0.0));
     this->velocities = std::make_shared<std::vector<glm::vec4>>(); //default velocity for each particle
     this->utilities = std::make_shared<std::vector<glm::vec4>>(particlesAmount, glm::vec4(0)); //default lambda for each particle
-    this->graphics = std::make_shared<std::vector<glm::vec4>>(particlesAmount, glm::vec4(0));
+    this->temps = std::make_shared<std::vector<unsigned int>>(particlesAmount, 0);
 
     this->vercities->reserve(particlesAmount);
     this->velocities->reserve(particlesAmount);
@@ -187,7 +197,9 @@ Particles::Particles(uint particlesAmountx, uint particlesAmounty, uint particle
     glGenBuffers(1, &NewPositionsBuffer);
     glGenBuffers(1, &VelocitiesBuffer);
     glGenBuffers(1, &UtilitiesBuffer);
-    glGenBuffers(1, &GraphicsBuffer);
+    glGenBuffers(1, &TempsBuffer);
+    glGenBuffers(1, &GridTableBuffer);
+    glGenBuffers(1, &GridIndicesBuffer);
 
     this->InitBoundingBox(boundingBoxCenter, boundingBoxSize, boundingBoxRenderShader);
     this->InitParticles(particlesAmountx, particlesAmounty, particlesAmountz, boundingBoxCenter, boundingBoxSize);
@@ -198,7 +210,7 @@ Particles::Particles(uint particlesAmountx, uint particlesAmounty, uint particle
 
 void Particles::BufferData() {
     if (this->vercities == nullptr or this->newPositions == nullptr or this->velocities == nullptr or
-        this->utilities == nullptr or this->graphics == nullptr) {
+        this->utilities == nullptr or this->temps == nullptr) {
         throw std::runtime_error("Function Particles::BufferData tries to access nullptr");
     }
     //bind
@@ -224,9 +236,20 @@ void Particles::BufferData() {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, UtilitiesBuffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); //unbind
 
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, GraphicsBuffer); //bind
-    glBufferData(GL_SHADER_STORAGE_BUFFER, graphics->size()*sizeof(glm::vec4), graphics->data(), GL_DYNAMIC_COPY);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, GraphicsBuffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, TempsBuffer); //bind
+    glBufferData(GL_SHADER_STORAGE_BUFFER, temps->size()*sizeof(unsigned int), NULL, GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, TempsBuffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); //unbind
+
+    //for grid usage case
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, GridTableBuffer); //bind
+    glBufferData(GL_SHADER_STORAGE_BUFFER, (newPositions->size()+1)*sizeof(unsigned int), NULL, GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, GridTableBuffer);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); //unbind
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, GridIndicesBuffer); //bind
+    glBufferData(GL_SHADER_STORAGE_BUFFER, newPositions->size()*sizeof(unsigned int), NULL, GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, GridIndicesBuffer);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0); //unbind
 
     glBindBuffer(GL_ARRAY_BUFFER, PositionsBuffer);
@@ -249,6 +272,7 @@ void Particles::Update(long double dt) {
         return;
 
     this->computeShaderProgram->Use();
+
     computeShaderProgram->SetUniformFloat("dt", static_cast<float>(dt));
     computeShaderProgram->SetUniformInt("totalParticlesAmount", vercities->size());
 
@@ -270,46 +294,71 @@ void Particles::Update(long double dt) {
 
     //calls compute shader
     this->computeShaderProgram->SetUniformInt("STAGE_NUMBER",0);
-    glDispatchCompute(this->vercities->size(), 1, 1);
+
+    constexpr GLuint LOCAL_SIZE = 32;
+    GLuint groups = (vercities->size() + LOCAL_SIZE - 1) / LOCAL_SIZE;
+
+    glDispatchCompute(groups, 1, 1);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); // waits untill all workgroups ends
 
+
     for (int i = 0; i < iterations; i++) {
+        //clearing the buffers before building hashgrid
+        GLuint zero = 0;
+        glBindVertexArray(VAO);
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, GridTableBuffer);
+        glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &zero);
+
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, GridIndicesBuffer);
+        glClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &zero);
+
+        glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+
+
+
+        //HASHGRID INIT ON GPU
+        this->computeShaderProgram->SetUniformInt("STAGE_NUMBER",1);
+        glDispatchCompute(groups, 1, 1);
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); // waits untill all workgroups ends
+
+        this->computeShaderProgram->SetUniformInt("STAGE_NUMBER",2);
+        glDispatchCompute(1, 1, 1);
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); // waits untill all workgroups ends
+
+        this->computeShaderProgram->SetUniformInt("STAGE_NUMBER",3);
+        glDispatchCompute(groups, 1, 1);
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); // waits untill all workgroups ends
+        //HASHGRID COMPLETED
+
+
+
         this->computeShaderProgram->SetUniformFloat("dt",dt/((float)iterations));
         //Second call - iterations of solver
-        this->computeShaderProgram->SetUniformInt("STAGE_NUMBER",1);
-        glDispatchCompute(this->vercities->size(), 1, 1);
+        this->computeShaderProgram->SetUniformInt("STAGE_NUMBER",4);
+        glDispatchCompute(groups, 1, 1);
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); // waits untill all workgroups ends
 
         //Third call - end step
-        this->computeShaderProgram->SetUniformInt("STAGE_NUMBER",2);
-        glDispatchCompute(this->vercities->size(), 1, 1);
+        this->computeShaderProgram->SetUniformInt("STAGE_NUMBER",5);
+        glDispatchCompute(groups, 1, 1);
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); // waits untill all workgroups ends
 
         //Third call - end step
-        this->computeShaderProgram->SetUniformInt("STAGE_NUMBER",3);
-        glDispatchCompute(this->vercities->size(), 1, 1);
+        this->computeShaderProgram->SetUniformInt("STAGE_NUMBER",6);
+        glDispatchCompute(groups, 1, 1);
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); // waits untill all workgroups ends
     }
 
     this->computeShaderProgram->SetUniformFloat("dt",dt);
     //Third call - end step
-    this->computeShaderProgram->SetUniformInt("STAGE_NUMBER",4);
-    glDispatchCompute(this->vercities->size(), 1, 1);
+    this->computeShaderProgram->SetUniformInt("STAGE_NUMBER",7);
+    glDispatchCompute(groups, 1, 1);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); // waits untill all workgroups ends
 
     //Third call - end step
-    this->computeShaderProgram->SetUniformInt("STAGE_NUMBER",5);
-    glDispatchCompute(this->vercities->size(), 1, 1);
+    this->computeShaderProgram->SetUniformInt("STAGE_NUMBER",8);
+    glDispatchCompute(groups, 1, 1);
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT); // waits untill all workgroups ends
-
-
-    //DEBUG ONLY
-    /*glBindBuffer(GL_SHADER_STORAGE_BUFFER, GraphicsBuffer); //bind
-    void* ptr = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
-
-    std::memcpy(graphics->data(), ptr, graphics->size()*sizeof(glm::vec4));
-    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);*/
-
 }
 
 void Particles::Render(glm::mat4 ViewMatrix, glm::mat4 ProjectionMatrix, glm::vec3 cameraPosition, std::shared_ptr<FrameBuffer> frameBuffer) {
@@ -327,10 +376,6 @@ void Particles::Render(glm::mat4 ViewMatrix, glm::mat4 ProjectionMatrix, glm::ve
         throw std::runtime_error("Function Particles::Render tries to access nullptr");
     }
 
-    if (this->renderBoundingBox && this->boundingBoxMesh != nullptr) {
-        this->boundingBoxMesh->Render(ViewMatrix, ProjectionMatrix, cameraPosition);
-    }
-
     this->renderShaderProgram->Use();
     renderShaderProgram->SetUniformFloat("sphereRadius", sphereRadius);
     //dont need model matrix, because all vertices of particle system are already in world possitions
@@ -340,8 +385,8 @@ void Particles::Render(glm::mat4 ViewMatrix, glm::mat4 ProjectionMatrix, glm::ve
 
     //binding buffers
     glBindVertexArray(VAO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, GraphicsBuffer); //bind
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, GraphicsBuffer);
+    /*glBindBuffer(GL_SHADER_STORAGE_BUFFER, GraphicsBuffer); //bind
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, GraphicsBuffer);*/
 
     glDrawArrays(renderMode, 0, vercities->size());
 
@@ -439,7 +484,7 @@ void Particles::InitParticles(uint particlesAmountx, uint particlesAmounty, uint
         throw std::runtime_error("Function Particles::InitParticles tries to access nullptr");
     }
 
-    float offset = 0.2f;
+    float offset = 0.1f;
 
     float size_x = particlesAmountx * offset;
     float size_y = particlesAmounty * offset;

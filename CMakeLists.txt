@@ -25,6 +25,9 @@ file(GLOB_RECURSE SOURCES_GLM
         "${PROJECT_SOURCE_DIR}/libs/glm/*.cpp"
         "${PROJECT_SOURCE_DIR}/libs/glm/*.h")
 
+file(GLOB_RECURSE SOURCES_STB
+        "${PROJECT_SOURCE_DIR}/libs/stb_image/*.h")
+
 include_directories(PositionBasedFluids src libs)
 
 add_library(glad SHARED ${SOURCES_GLAD})
@@ -33,13 +36,7 @@ add_library(imgui SHARED ${SOURCES_IMGUI})
 
 add_library(glm SHARED ${SOURCES_GLM})
 
-add_executable(PositionBasedFluids ${SOURCES}
-        src/FrameBuffer.cpp
-        src/FrameBuffer.h
-        src/Texture.cpp
-        src/Texture.h
-        src/Utils.cpp
-        src/Utils.h)
+add_executable(PositionBasedFluids ${SOURCES})
 
 target_link_libraries(PositionBasedFluids
         glfw

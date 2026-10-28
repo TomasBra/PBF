@@ -74,10 +74,11 @@ int Window::Run() {
         // render
         // ------
         currentScene->Render(window, this->Width, this->Height);
-        ui.Render();
 
         currentScene->Display(this->Width, this->Height);
 
+
+        ui.Render();
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -167,6 +168,7 @@ int Window::IMGUIInit() {
 
 void Window::UIInit() {
     ui.Render = [&]() {
+        glBindFramebuffer(GL_FRAMEBUFFER, 0); // back to default
         // ImGUI First window creation
         ImGui::Begin("Position Based Fluids Simulation");
 

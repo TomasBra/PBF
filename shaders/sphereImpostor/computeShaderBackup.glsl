@@ -2,15 +2,14 @@
 layout (local_size_x = 1) in;
 
 const float PI = 3.1415926535897932384626433832795;
-uniform float REST_DENSITY = 5500.0f;
-uniform float r = 0.1f;
-uniform float relaxation = 3500.0f;
-uniform bool artificial_pressure = true;
-uniform float ar = 0.1f;
-uniform float k = 0.001f;
-uniform int n = 4;
-uniform float q_size = 0.1f;
-uniform float ParticleMass = 1.0f;
+uniform float REST_DENSITY;
+uniform float r;
+uniform float relaxation;
+uniform bool artificial_pressure;
+uniform float ar;
+uniform float k;
+uniform int n;
+uniform float q_size;
 
 //kg/m^3
 //radius in which the particles are classified as neighbours
@@ -23,7 +22,6 @@ uniform int totalParticlesAmount;
 uniform int STAGE_NUMBER;
 
 
-float ParticleInvMass = 1.0 / ParticleMass;
 const vec3 g = vec3(0, -9.81, 0);
 const float friction = 1.0f;
 
@@ -54,7 +52,28 @@ layout(std140, binding=4) buffer Graph {
     vec4 Graphics[]; //x = density
 };
 
+//size = totalParticlesAmount + 1
+layout(std430, binding=5) buffer GridTableBuffer {
+    uint GridTable[];
+};
 
+//size = totalParticlesAmount
+layout(std430, binding=6) buffer GridIndicesBuffer {
+    uint GridIndices[];
+};
+
+
+
+
+
+
+void GetNeighboursParticles(int particleIndex, inout neighbours_count){
+
+}
+
+void GetGridCellParticles(vec4 position, inout cell_particles_count){
+
+}
 
 
 
@@ -158,7 +177,7 @@ vec3 spikyKernelGradient(vec3 deltaPosition, float h){
     return (coeff/h6)*d2*deltaPosition/r1; //direction of deltaPosition
 }
 
-
+//ok
 float incompressibilityLambdaCalc(uint idx){
     //Ri = sum j over(poly6Kernel(pi-pj))
     float Ri = 0;
@@ -214,7 +233,7 @@ vec3 incompressibilityDeltaPositionCalc(uint idx){
             //neighbour
             if(dot(localDeltaPosition, localDeltaPosition) < r*r){
                 if(artificial_pressure){
-                    s_corr = -k * pow((poly6Kernel(localDeltaPosition, ar)) / (poly6Kernel(vec3(q_size * ar, 0, 0),ar)), n);
+                    s_corr = -k * pow((poly6Kernel(localDeltaPosition, ar)) / (poly6Kernel(vec3(q_size, 0, 0),ar)), n);
                 }
 
                 idxDeltaPosition += (lambda_idx + Utilities[j].w + s_corr) * spikyKernelGradient(localDeltaPosition, r);
@@ -247,8 +266,8 @@ void main() {
     }else if(STAGE_NUMBER == 5){
         boxCollision(idx);
 
-        /*
-        for (uint j = 0; j < totalParticlesAmount; j++){
+
+        /*for (uint j = 0; j < totalParticlesAmount; j++){
             if(j != idx){
                 particlesCollision(idx, j);
             }

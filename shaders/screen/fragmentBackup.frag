@@ -1,6 +1,11 @@
 #version 430 core
 out vec4 FragColor;
 
+uniform bool renderFluid = true;
+uniform bool blurFilter = true;
+uniform float depthFactor = 1.0f;
+uniform int seletedBlur = 0;
+
 uniform int STAGE_NUMBER = 0;
 uniform vec2 blurDirection = vec2(1,0);
 
@@ -13,135 +18,232 @@ uniform sampler2D sceneDepthTexture;
 uniform sampler2D particlesColorTexture;
 uniform sampler2D particlesDepthTexture;
 
+uniform sampler2D particlesThicknesTexture;
+
 in vec2 uv;
 
-uniform vec2 texelsize = vec2(1,1);
+uniform vec2 texelsize = vec2(1,0);
 
-const int SAMPLE_COUNT = 30;
+const float near = 0.1f;
+const float far = 100.0f;
 
-const float OFFSETS[30] = float[30](
-        -28.499287551080844,
-        -26.499337550956973,
-        -24.499387548996058,
-        -22.499437544767737,
-        -20.499487537782343,
-        -18.49953752748464,
-        -16.499587513246524,
-        -14.49963749435975,
-        -12.499687470027371,
-        -10.499737439354503,
-        -8.499787401338647,
-        -6.4998373548584,
-        -4.499887298661818,
-        -2.4999372313531225,
-        -0.49998718135373565,
-        1.4999621930526983,
-        3.499912266489702,
-        5.49986232805838,
-        7.499812379231655,
-        9.499762421331635,
-        11.499712455543497,
-        13.499662482927798,
-        15.499612504431878,
-        17.49956252090044,
-        19.49951253308502,
-        21.499462541652775,
-        23.499412547194407,
-        25.499362550231684,
-        27.499312551223795,
-        29
+const float PI = 3.1415926535897932384626433832795;
+
+const vec3 k = vec3(0.9, 0.5, 0.1);
+
+const int SAMPLE_COUNT = 31;
+
+const float OFFSETS[31] = float[31](
+        -15,
+        -14,
+        -13,
+        -12,
+        -11,
+        -10,
+        -9,
+        -8,
+        -7,
+        -6,
+        -5,
+        -4,
+        -3,
+        -2,
+        -1,
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15
 );
 
-const float WEIGHTS[30] = float[30](
-        0.03302145587301725,
-        0.033203556217610085,
-        0.033373309362281625,
-        0.03353051661845077,
-        0.03367499354061956,
-        0.03380657030682477,
-        0.033925092073096436,
-        0.03403041930111521,
-        0.034122428058238376,
-        0.034201010289228936,
-        0.03426607405901285,
-        0.034317543765964784,
-        0.034355360325249315,
-        0.03437948132181533,
-        0.03438987907109618,
-        0.0343863973182838,
-        0.034369134765091784,
-        0.03433816173228983,
-        0.03429351225219843,
-        0.03423523709198431,
-        0.034163403615902505,
-        0.034078095617106466,
-        0.033979413119259644,
-        0.03386747214847555,
-        0.033742404475986074,
-        0.03360435733217827,
-        0.03345349309267747,
-        0.033289988937163506,
-        0.033114036481817946,
-        0.016487201835962927
+const float WEIGHTS[31] = float[31](
+        0.03225338735356131,
+        0.032254322715357234,
+        0.03225519359382736,
+        0.032255999983747036,
+        0.03225674188027844,
+        0.032257419278970585,
+        0.032258032175759385,
+        0.03225858056696769,
+        0.032259064449305305,
+        0.032259483819869046,
+        0.03225983867614277,
+        0.03226012901599738,
+        0.03226035483769087,
+        0.032260516139868314,
+        0.032260612921561904,
+        0.032260645182190954,
+        0.032260612921561904,
+        0.032260516139868314,
+        0.03226035483769087,
+        0.03226012901599738,
+        0.03225983867614277,
+        0.032259483819869046,
+        0.032259064449305305,
+        0.03225858056696769,
+        0.032258032175759385,
+        0.032257419278970585,
+        0.03225674188027844,
+        0.032255999983747036,
+        0.03225519359382736,
+        0.032254322715357234,
+        0.03225338735356131
 );
 
-void firstPass(){
+
+
+
+
+
+
+float gaussian(float x, float sigma) {
+   return exp(-(pow(x, 2))/(2 * pow(sigma, 2))) / (2 * PI * pow(sigma, 2));
+}
+
+float LinearizeDepth(float depth){
+   float ndc = depth * 2.0 - 1.0;
+   ndc = (2*depth - gl_DepthRange.near - gl_DepthRange.far)/gl_DepthRange.diff;
+
+   float linearDepth = (2.0 * near * far) / (far + near - ndc * (far - near));
+
+   return linearDepth;
+}
+
+vec3 ViewPos(vec2 uv){
+   float depth = texture(particlesColorTexture, uv).x;
+   vec3 viewVector = (inverse(Projection) * vec4(uv*2.0-1.0, 1, 1)).xyz;
+
+   return normalize(viewVector)*depth;
+}
+
+vec3 WorldPos(vec2 uv){
+   vec3 viewPos = ViewPos(uv);
+
+   return (inverse(View)*vec4(viewPos, 0)).xyz;
+}
+
+vec4 BilateralFilter(vec2 _uv, sampler2D text){
+   vec4 _sample = texture(text, uv);
+   float centerDepth = _sample.x;
+
+   if(_sample.x == 1){
+      return _sample;
+   }
+
+   vec2 size = textureSize(text, 0);
+
+   vec4 sum = vec4(0);
+   float wsum = 0;
+
+   for (int i = 0; i < SAMPLE_COUNT; ++i)
+   {
+      vec2 offset = blurDirection * OFFSETS[i] / size;
+      _sample = texture(text, _uv + offset);
+      float _sampleDepth = _sample.x;
+      float depthDifference = (centerDepth - _sampleDepth) * depthFactor;
+
+      if(_sample.x != 1){
+         float depthWeight = exp(-depthDifference * depthDifference);
+         float gausWeight = WEIGHTS[i];
+         float totalWeight = depthWeight * gausWeight;
+
+         wsum += totalWeight;
+         sum += _sample * totalWeight;
+      }
+   }
+
+   if(wsum > 0.0){
+      return sum/wsum;
+   }
+   return sum;
+}
+
+vec4 GaussianBlur(vec2 _uv, sampler2D text){
    vec4 result = vec4(0.0);
-   vec2 size = textureSize(particlesColorTexture, 0);
+   vec2 size = textureSize(text, 0);
+   float total_weight = 0;
+   /*INFINIT DEPTH*/
+   vec4 _sample = texture(text, _uv);
+   if(_sample.x == 1){
+      return _sample;
+   }
+
    for (int i = 0; i < SAMPLE_COUNT; ++i)
    {
       vec2 offset = blurDirection * OFFSETS[i] / size;
       float weight = WEIGHTS[i];
-      result += texture(particlesColorTexture, uv + offset) * weight;
+      _sample = texture(text, _uv + offset);
+      if(_sample.x != 1){
+         total_weight += weight;
+         result += _sample * weight;
+      }
    }
 
-   //FragColor = result;
-   FragColor = texture(particlesColorTexture, uv);
+   return vec4(result.xyz/total_weight,1); //normalization because of missing samples
+}
+
+void firstPass(){
+   float depth = texture(particlesColorTexture, uv).x;
+   float thicknes = texture(particlesThicknesTexture, uv).x;
+   if(depth == 0){
+      FragColor = vec4(1,thicknes, 0, 1);
+   }else {
+      FragColor = vec4(depth, thicknes, 0, 1);
+   }
 }
 
 void secondPass(){
-   vec4 result = vec4(0.0);
-   vec2 size = textureSize(particlesColorTexture, 0);
-   for (int i = 0; i < SAMPLE_COUNT; ++i)
-   {
-      vec2 offset = blurDirection * OFFSETS[i] / size;
-      float weight = WEIGHTS[i];
-      result += texture(particlesColorTexture, uv + offset) * weight;
+   if(seletedBlur == 0){
+      FragColor = GaussianBlur(uv, particlesColorTexture);
+   }else if(seletedBlur == 1){
+      FragColor = BilateralFilter(uv, particlesColorTexture);
+   }else{
+      FragColor = texture(particlesColorTexture, uv);
    }
-
-   //FragColor = result;
-   FragColor = texture(particlesColorTexture, uv);
 }
 
 void combinationPass(){
-   float depth = texture(particlesDepthTexture, uv).x;
-
-
-   if(texture(sceneDepthTexture, uv).x <= texture(particlesDepthTexture, uv).x){
+   if(min(LinearizeDepth(texture(sceneDepthTexture, uv).x)/(10*far),1.0f) <= texture(particlesColorTexture, uv).x){
       FragColor = texture(sceneColorTexture, uv);
    }else{
-      vec4 temp = vec4(u, v, texture(particlesDepthTexture, uv).x, 1);
-      temp *= inverse(Projection);
-      vec3 posEye = (inverse(Projection)*vec4(uv, 1, 1) * texture(particlesDepthTexture, uv).x).xyz;
+      vec3 posCentre = WorldPos(uv);
 
-      vec3 ddx = ((inverse(Projection)*vec4(uv+texelsize.x*vec2(1,0), 1, 1)) * texture(particlesDepthTexture, uv + texelsize.x*vec2(1,0)).x).xyz - posEye;
-      vec3 ddx2 = posEye - ((inverse(Projection)*vec4(uv+texelsize.x*vec2(-1,0), 1, 1)) * texture(particlesDepthTexture, uv + texelsize.x*vec2(-1,0)).x).xyz;
-
+      vec3 ddx = WorldPos(uv+vec2(texelsize.x, 0)) - posCentre;
+      vec3 ddx2 = posCentre - WorldPos(uv+vec2(-texelsize.x, 0));
       if(abs(ddx.z) > abs(ddx2.z)){
          ddx = ddx2;
       }
 
-      vec3 ddy = ((inverse(Projection)*vec4(uv+texelsize.y*vec2(0,1), 1, 1)) * texture(particlesDepthTexture, uv + texelsize.y*vec2(0,1)).x).xyz - posEye;
-      vec3 ddy2 = posEye - ((inverse(Projection)*vec4(uv+texelsize.y*vec2(0,-1), 1, 1)) * texture(particlesDepthTexture, uv + texelsize.y*vec2(0,-1)).x).xyz;
-
-      if(abs(ddy.z) < abs(ddy2.z)){
+      vec3 ddy = WorldPos(uv+vec2(0, texelsize.y)) - posCentre;
+      vec3 ddy2 = posCentre - WorldPos(uv+vec2(0, texelsize.y));
+      if(abs(ddy.z) > abs(ddy2.z)){
          ddy = ddy2;
       }
 
-      vec3 n = normalize(cross(ddx, ddy));
-      FragColor = vec4(n, 1.0);
-      //FragColor = texture(particlesColorTexture, uv);
-      //zFragColor = vec4(texture(particlesDepthTexture, uv).x,texture(particlesDepthTexture, uv).x, texture(particlesDepthTexture, uv).x, 1);
+      vec3 worldNormal = normalize(cross(ddx, ddy));
+      vec3 color = vec3(0);
+
+      if(renderFluid){
+         float thicknes = texture(particlesColorTexture, uv).y;
+         color = exp(-k * 2 * thicknes);
+
+         color *= texture(sceneColorTexture, uv + worldNormal.xy * thicknes).xyz;
+      }else{
+         color = worldNormal;
+      }
+
+      FragColor = vec4(color, 1);
    }
 }
 
@@ -152,6 +254,8 @@ void main()
    }else if(STAGE_NUMBER == 1){
       secondPass();
    }else if(STAGE_NUMBER == 2){
+      secondPass();
+   }else if(STAGE_NUMBER == 3){
       combinationPass();
    }
 }

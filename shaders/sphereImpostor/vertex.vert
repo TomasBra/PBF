@@ -10,17 +10,17 @@ uniform vec3 CameraPosition;
 
 uniform float sphereRadius;
 
-layout(std140, binding=4) buffer Graph {
+/*layout(std140, binding=4) buffer Graph {
    vec4 Graphics[]; //x = density
-};
+};*/
 
-out DATA{
+/*out DATA{
  vec4 graphics;
-} data_out;
+} data_out;*/
 
 void main(){
    gl_PointSize = 8.0f;
    gl_Position = pos;
 
-   data_out.graphics = Graphics[gl_InstanceID];
+   //data_out.graphics = Graphics[gl_InstanceID];
 }

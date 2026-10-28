@@ -4,6 +4,8 @@
 
 #ifndef POSITIONBASEDFLUIDS_TEXTURE_H
 #define POSITIONBASEDFLUIDS_TEXTURE_H
+#include <filesystem>
+
 #include "glad/glad.h"
 
 
@@ -16,6 +18,7 @@ public:
     int width, height;
 
     Texture(int width, int height, GLenum _attachmentType, GLint _internalFormat, bool attachToBuffer = false);
+    Texture(std::filesystem::path src, GLenum _attachmentType, GLint _internalFormat, bool attachToBuffer = false);
     void ResizeTextureAttachment(int _width, int _height);
     void Bind(GLenum unit);
 

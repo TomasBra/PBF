@@ -16,11 +16,16 @@ FrameBuffer::FrameBuffer(int width, int height, int _textureAttachments): textur
         this->colorTexture = std::make_unique<Texture>(width, height, GL_COLOR_ATTACHMENT0, GL_RGB, true);
     }
 
-    if (_textureAttachments == HIGH_COLOR_TEXTURE or _textureAttachments == HIGH_COLOR_AND_DEPTH_TEXTURE) {
+    if (_textureAttachments == HIGH_R_COLOR_TEXTURE or _textureAttachments == HIGH_R_COLOR_AND_DEPTH_TEXTURE) {
         this->colorTexture = std::make_unique<Texture>(width, height, GL_COLOR_ATTACHMENT0,GL_R32F, true);
     }
 
-    if (_textureAttachments == DEPTH_TEXTURE or _textureAttachments == COLOR_AND_DEPTH_TEXTURE or _textureAttachments == HIGH_COLOR_AND_DEPTH_TEXTURE) {
+    if (_textureAttachments == HIGH_RG_COLOR_TEXTURE or _textureAttachments == HIGH_RG_COLOR_AND_DEPTH_TEXTURE) {
+        this->colorTexture = std::make_unique<Texture>(width, height, GL_COLOR_ATTACHMENT0,GL_RG32F, true);
+    }
+
+    if (_textureAttachments == DEPTH_TEXTURE or _textureAttachments == COLOR_AND_DEPTH_TEXTURE or
+        _textureAttachments == HIGH_R_COLOR_AND_DEPTH_TEXTURE or _textureAttachments == HIGH_RG_COLOR_AND_DEPTH_TEXTURE) {
         this->depthTexture = std::make_unique<Texture>(width, height, GL_DEPTH_ATTACHMENT, GL_DEPTH_COMPONENT, true);
     }
 
@@ -36,12 +41,16 @@ void FrameBuffer::Bind() {
     glEnable(GL_DEPTH_TEST);
     // Accept fragment if it closer to the camera than the former one
     glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDepthFunc(GL_LESS);
 }
 
 void FrameBuffer::UnBind() {
     glDisable(GL_DEPTH_TEST);
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 void FrameBuffer::ResizeTextures(int width, int height) {

@@ -11,7 +11,7 @@ uniform float sphereRadius;
 flat in vec3 toCamera; //vector, always same
 in vec2 mapping;
 flat in vec3 center; //world-space cordinates
-flat in vec4 graphics;
+//flat in vec4 graphics;
 flat in vec3 up;
 flat in vec3 right;
 
@@ -71,18 +71,14 @@ void main()
    vec3 cameraPos = vec3(0);
    vec3 cameraNormal;
 
-   //DepthImpostor(cameraPos, cameraNormal);
-   Impostor(cameraPos, cameraNormal);
+   DepthImpostor(cameraPos, cameraNormal);
+   //Impostor(cameraPos, cameraNormal);
    FragColor = vec4(15/255.0f, 82/255.0f, 186/255.0, 1.0f);
-   //FragColor = vec4(max(min(graphics.x/1000,1),0), 0,0, 1.0f);
 
    vec4 clipPos = Projection * vec4(cameraPos, 1.0);
    float ndcDepth = clipPos.z / clipPos.w;
    gl_FragDepth = ((gl_DepthRange.diff * ndcDepth) + gl_DepthRange.near + gl_DepthRange.far) / 2.0;
-   //gl_FragDepth = 1;
-   //FragColor = vec4(ndcDepth, ndcDepth,ndcDepth,1);
-   //FragColor = vec4(cameraNormal,1);
 
-   float depth = min(LinearizeDepth(gl_FragDepth)*5/far, 1.0f);
-   FragColor = vec4(depth, 0, 0, 1.0);
+   float depth = min(LinearizeDepth(gl_FragDepth)/(far), 1.0f);
+   FragColor = vec4(depth, depth/10, 0, 1.0);
 }
