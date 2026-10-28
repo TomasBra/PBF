@@ -8,6 +8,8 @@ Overall creation time: 107 h wihtout ChatGPT and other LLMs
 
 ![Preview](images/Snímek%20obrazovky_20261028_211945.png)
 
+<video src="images/Messenger_creation_36D0FF03-B1D2-467D-837E-71DCCD11F674.mp4" controls width="600"></video>
+
 ![Preview](images/Snímek%20obrazovky_20261028_211914.png)
 
 ![Preview](images/Snímek%20obrazovky_20261028_211820.png)
